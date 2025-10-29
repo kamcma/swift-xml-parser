@@ -77,13 +77,18 @@ struct CommentParser: ParserPrinter {
   }
 }
 
-let textParser = ParsePrint(input: Substring.UTF8View.self) {
-    Whitespace(.horizontal)
-    Prefix(1...) {
+struct TextParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
+    ParsePrint {
+      Whitespace(.horizontal)
+      Prefix(1...) {
         $0 != .init(ascii: "<") && $0 != .init(ascii: "\n")
+      }
     }
+    .map(.string)
+    .map(.case(XML.Node.text))
+  }
 }
-.map(.string).map(/XML.Node.text)
 
 let xmlPrologParser = ParsePrint {
     "<?xml".utf8
@@ -132,7 +137,7 @@ let contentParser: (Int?) -> AnyParserPrinter<Substring.UTF8View, XML.Node> = { 
             containerTagParser(indentation).map(/XML.Node.element)
             emptyTagParser.map(/XML.Node.element)
             CommentParser()
-            textParser
+            TextParser()
         }
     }.eraseToAnyParserPrinter()
 }

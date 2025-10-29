@@ -76,9 +76,9 @@ final class XMLParserTests: XCTestCase {
 
     func testText() throws {
         let text = "hoi"
-        let result = try textParser.parse(text)
+        let result = try TextParser().parse(text)
         XCTAssertNoDifference(result, .text("hoi"))
-        let printResult = try textParser.print(result)
+        let printResult = try TextParser().print(result)
         XCTAssertNoDifference(String(printResult), text)
     }
 
