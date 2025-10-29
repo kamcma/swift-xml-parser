@@ -118,20 +118,22 @@ struct XMLPrologParser: ParserPrinter {
     }
 }
 
-let openingTagParser = ParsePrint {
-    "<".utf8
-    Not { "/".utf8 }
-    Prefix(1...) { $0 != .init(ascii: ">") }.pipe {
-        TagHeadParser()
-        Whitespace(.horizontal)
+struct OpeningTagParser: ParserPrinter {
+    var body: some ParserPrinter<Substring.UTF8View, (String, OrderedDictionary<String, String>)> {
+        "<".utf8
         Not { "/".utf8 }
+        Prefix(1...) { $0 != .init(ascii: ">") }.pipe {
+            TagHeadParser()
+            Whitespace(.horizontal)
+            Not { "/".utf8 }
+        }
+        ">".utf8
     }
-    ">".utf8
 }
 
 let containerTagParser = { (indentation: Int?) in
     ParsePrint {
-        openingTagParser
+        OpeningTagParser()
         Whitespace(.vertical).printing(indentation != nil ? "\n".utf8 : "".utf8)
         Many {
             Lazy {

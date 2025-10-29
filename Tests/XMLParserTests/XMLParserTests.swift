@@ -59,10 +59,10 @@ final class XMLParserTests: XCTestCase {
 
     func testOpeningTag() throws {
         let openingTag = "<xmlTag header1=\"none\">"
-        let result = try openingTagParser.parse(openingTag)
+        let result = try OpeningTagParser().parse(openingTag)
         XCTAssertNoDifference(result.0, "xmlTag")
         XCTAssertNoDifference(result.1["header1"], "none")
-        let printResult = try openingTagParser.print(result)
+        let printResult = try OpeningTagParser().print(result)
         XCTAssertNoDifference(String(printResult), openingTag)
     }
 
