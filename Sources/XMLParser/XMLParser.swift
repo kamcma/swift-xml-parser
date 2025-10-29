@@ -19,11 +19,7 @@ struct AttributeParser: ParserPrinter {
 }
 
 struct AttributesParser: ParserPrinter {
-    var body:
-        some ParserPrinter<
-            Substring.UTF8View, OrderedDictionary<String, String>
-        >
-    {
+    var body: some ParserPrinter<Substring.UTF8View, OrderedDictionary<String, String>> {
         Many(into: OrderedDictionary<String, String>()) { attrs, attr in
             attrs.updateValue(attr.1, forKey: attr.0)
         } decumulator: { attrs in
@@ -46,11 +42,7 @@ struct TagNameParser: ParserPrinter {
 }
 
 struct TagHeadParser: ParserPrinter {
-    var body:
-        some ParserPrinter<
-            Substring.UTF8View, (String, OrderedDictionary<String, String>)
-        >
-    {
+    var body: some ParserPrinter<Substring.UTF8View, (String, OrderedDictionary<String, String>)> {
         TagNameParser()
         ParsePrint {
             Whitespace(1..., .horizontal)
