@@ -3,64 +3,81 @@ import OrderedCollections
 import Parsing
 
 struct QuotedStringParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, String> {
-    "\"".utf8
-    PrefixUpTo("\"".utf8).map(.string)
-    "\"".utf8
-  }
+    var body: some ParserPrinter<Substring.UTF8View, String> {
+        "\"".utf8
+        PrefixUpTo("\"".utf8).map(.string)
+        "\"".utf8
+    }
 }
 
 struct AttributeParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, (String, String)> {
-    PrefixUpTo("=".utf8).map(.string)
-    "=".utf8
-    QuotedStringParser()
-  }
+    var body: some ParserPrinter<Substring.UTF8View, (String, String)> {
+        PrefixUpTo("=".utf8).map(.string)
+        "=".utf8
+        QuotedStringParser()
+    }
 }
 
 struct AttributesParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, OrderedDictionary<String, String>> {
-    Many(into: OrderedDictionary<String, String>()) { attrs, attr in
-      attrs.updateValue(attr.1, forKey: attr.0)
-    } decumulator: { attrs in
-      attrs.reversed().map({ ($0.key, $0.value) }).makeIterator()
-    } element: {
-      AttributeParser()
-    } separator: {
-      Whitespace(1..., .horizontal)
+    var body:
+        some ParserPrinter<
+            Substring.UTF8View, OrderedDictionary<String, String>
+        >
+    {
+        Many(into: OrderedDictionary<String, String>()) { attrs, attr in
+            attrs.updateValue(attr.1, forKey: attr.0)
+        } decumulator: { attrs in
+            attrs.reversed().map({ ($0.key, $0.value) }).makeIterator()
+        } element: {
+            AttributeParser()
+        } separator: {
+            Whitespace(1..., .horizontal)
+        }
     }
-  }
 }
 
 struct TagNameParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, String> {
-    From(.substring) {
-      Prefix { $0.isLetter }
+    var body: some ParserPrinter<Substring.UTF8View, String> {
+        From(.substring) {
+            Prefix { $0.isLetter }
+        }
+        .map(.string)
     }
-    .map(.string)
-  }
 }
 
-let tagHeadParser = ParsePrint {
-    TagNameParser()
-    Optionally {
-        Whitespace(1..., .horizontal)
-        AttributesParser()
-    }.map(Conversions.OptionalEmptyDictionary())
-    Whitespace(.horizontal)
+struct TagHeadParser: ParserPrinter {
+    var body:
+        some ParserPrinter<
+            Substring.UTF8View, (String, OrderedDictionary<String, String>)
+        >
+    {
+        TagNameParser()
+        ParsePrint {
+            Whitespace(1..., .horizontal)
+            AttributesParser()
+        }
+        .replaceError(with: OrderedDictionary<String, String>())
+        .printing { attrs, input in
+            try AttributesParser().print(attrs, into: &input)
+            if !attrs.isEmpty {
+                try Whitespace(1, .horizontal).print(into: &input)
+            }
+        }
+        Whitespace(.horizontal)
+    }
 }
 
-struct XMLParsingError: Error { }
+struct XMLParsingError: Error {}
 
 let emptyTagParser = ParsePrint {
     "<".utf8
     Not { "/".utf8 }
     Prefix(1...) { $0 != .init(ascii: ">") }.pipe {
-        tagHeadParser
+        TagHeadParser()
         "/".utf8
     }
     ">".utf8
-    Always(Array<XML.Node>())
+    Always([XML.Node]())
     Always("")
 }
 .filter { $0.2.isEmpty }
@@ -68,32 +85,41 @@ let emptyTagParser = ParsePrint {
 .map(.memberwise(XML.Element.init))
 
 struct CommentParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
-    ParsePrint(.case(XML.Node.comment)) {
-      "<!--".utf8
-      PrefixUpTo("-->".utf8).map(.string)
-      "-->".utf8
+    var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
+        ParsePrint(.case(XML.Node.comment)) {
+            "<!--".utf8
+            PrefixUpTo("-->".utf8).map(.string)
+            "-->".utf8
+        }
     }
-  }
 }
 
 struct TextParser: ParserPrinter {
-  var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
-    ParsePrint {
-      Whitespace(.horizontal)
-      Prefix(1...) {
-        $0 != .init(ascii: "<") && $0 != .init(ascii: "\n")
-      }
+    var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
+        ParsePrint {
+            Whitespace(.horizontal)
+            Prefix(1...) {
+                $0 != .init(ascii: "<") && $0 != .init(ascii: "\n")
+            }
+        }
+        .map(.string)
+        .map(.case(XML.Node.text))
     }
-    .map(.string)
-    .map(.case(XML.Node.text))
-  }
 }
 
 let xmlPrologParser = ParsePrint {
     "<?xml".utf8
-    Whitespace(1..., .horizontal)
-    AttributesParser()
+    ParsePrint {
+        Whitespace(1..., .horizontal)
+        AttributesParser()
+    }
+    .replaceError(with: OrderedDictionary<String, String>())
+    .printing { attrs, input in
+        try AttributesParser().print(attrs, into: &input)
+        if !attrs.isEmpty {
+            try Whitespace(1, .horizontal).print(into: &input)
+        }
+    }
     Whitespace(.horizontal)
     "?>".utf8
 }
@@ -102,7 +128,7 @@ let openingTagParser = ParsePrint {
     "<".utf8
     Not { "/".utf8 }
     Prefix(1...) { $0 != .init(ascii: ">") }.pipe {
-        tagHeadParser
+        TagHeadParser()
         Whitespace(.horizontal)
         Not { "/".utf8 }
     }
@@ -116,10 +142,14 @@ let containerTagParser = { (indentation: Int?) in
         Many {
             Lazy {
                 contentParser(indentation.map { $0 + 4 })
-                Whitespace(.vertical).printing(indentation != nil ? "\n".utf8 : "".utf8)
+                Whitespace(.vertical).printing(
+                    indentation != nil ? "\n".utf8 : "".utf8
+                )
             }
         } terminator: {
-            Whitespace(.horizontal).printing(String(repeating: " ", count: indentation ?? 0).utf8)
+            Whitespace(.horizontal).printing(
+                String(repeating: " ", count: indentation ?? 0).utf8
+            )
             "</".utf8
         }
         Prefix { $0 != .init(ascii: ">") }.map(.string)
@@ -130,9 +160,12 @@ let containerTagParser = { (indentation: Int?) in
     .map(.memberwise(XML.Element.init))
 }
 
-let contentParser: (Int?) -> AnyParserPrinter<Substring.UTF8View, XML.Node> = { indentation in
+let contentParser: (Int?) -> AnyParserPrinter<Substring.UTF8View, XML.Node> = {
+    indentation in
     ParsePrint {
-        Whitespace(.horizontal).printing(String(repeating: " ", count: indentation ?? 0).utf8)
+        Whitespace(.horizontal).printing(
+            String(repeating: " ", count: indentation ?? 0).utf8
+        )
         OneOf {
             containerTagParser(indentation).map(/XML.Node.element)
             emptyTagParser.map(/XML.Node.element)
@@ -168,15 +201,17 @@ public struct XMLParser: ParserPrinter {
         .map(.memberwise(XML.init(prolog:root:)))
         .eraseToAnyParserPrinter()
     }
-    
+
     /// Prints an string representation of xml into the provided input.
     /// - Parameters:
     ///   - output: the structured XML to turn into a string
     ///   - input: the input to write the string representation to
-    public func print(_ output: XML, into input: inout Substring.UTF8View) throws {
+    public func print(_ output: XML, into input: inout Substring.UTF8View)
+        throws
+    {
         try parser.print(output, into: &input)
     }
-    
+
     /// Parses an xml string into a structured ``XML`` type
     /// - Parameters:
     ///   - input: the input string to parse

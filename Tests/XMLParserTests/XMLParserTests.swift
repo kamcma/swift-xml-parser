@@ -33,12 +33,12 @@ final class XMLParserTests: XCTestCase {
 
     func testTagHead() throws {
         let tagHead1 = "xmlTag header=\"none\" "
-        let result1 = try tagHeadParser.parse(tagHead1)
+        let result1 = try TagHeadParser().parse(tagHead1)
         XCTAssertNoDifference(result1.0, "xmlTag")
         XCTAssertNoDifference(result1.1["header"], "none")
 
         let tagHead2 = "xmlTag "
-        let result2 = try tagHeadParser.parse(tagHead2)
+        let result2 = try TagHeadParser().parse(tagHead2)
         XCTAssertNoDifference(result2.0, "xmlTag")
         XCTAssertNoDifference(result2.1["header"], nil)
     }
