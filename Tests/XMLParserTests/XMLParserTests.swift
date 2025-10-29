@@ -7,27 +7,27 @@ import CustomDump
 final class XMLParserTests: XCTestCase {
     func testQuotedString() throws {
         let quotedString = "\"hoi\""
-        let result = try quotedStringParser.parse(quotedString)
+        let result = try QuotedStringParser().parse(quotedString)
         XCTAssertNoDifference("hoi", result)
-        let printResult = try quotedStringParser.print(result)
+        let printResult = try QuotedStringParser().print(result)
         XCTAssertNoDifference(String(printResult), quotedString)
     }
 
     func testAttribute() throws {
         let attribute = "header=\"none\""
-        let result = try attributeParser.parse(attribute)
+        let result = try AttributeParser().parse(attribute)
         XCTAssertNoDifference(result.0, "header")
         XCTAssertNoDifference(result.1, "none")
-        let printResult = try attributeParser.print(result)
+        let printResult = try AttributeParser().print(result)
         XCTAssertNoDifference(String(printResult), attribute)
     }
 
     func testAttributes() throws {
         let attributes = "header1=\"none\" header2=\"some\""
-        let result = try attributesParser.parse(attributes)
+        let result = try AttributesParser().parse(attributes)
         XCTAssertNoDifference(result["header1"], "none")
         XCTAssertNoDifference(result["header2"], "some")
-        let printResult = try attributesParser.print(result)
+        let printResult = try AttributesParser().print(result)
         XCTAssertNoDifference(String(printResult), attributes)
     }
 
@@ -84,9 +84,9 @@ final class XMLParserTests: XCTestCase {
 
     func testComment() throws {
         let comment = "<!--some comments <xml in=\"between\"> endOfcomment-->"
-        let result = try commentParser.parse(comment)
+        let result = try CommentParser().parse(comment)
         XCTAssertNoDifference(result, .comment("some comments <xml in=\"between\"> endOfcomment"))
-        let printResult = try commentParser.print(result)
+        let printResult = try CommentParser().print(result)
         XCTAssertNoDifference(String(printResult), comment)
     }
 

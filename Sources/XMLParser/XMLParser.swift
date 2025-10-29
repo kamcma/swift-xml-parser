@@ -1,32 +1,54 @@
-import Parsing
 import CasePaths
+import OrderedCollections
+import Parsing
 
-let quotedStringParser = ParsePrint {
+struct QuotedStringParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, String> {
     "\"".utf8
     PrefixUpTo("\"".utf8).map(.string)
     "\"".utf8
+  }
 }
 
-let attributeParser = ParsePrint {
+struct AttributeParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, (String, String)> {
     PrefixUpTo("=".utf8).map(.string)
     "=".utf8
-    quotedStringParser
+    QuotedStringParser()
+  }
 }
 
 let attributesParser = Many {
-    attributeParser
+    AttributeParser()
 } separator: {
     Whitespace(1..., .horizontal)
 }.map(Conversions.TuplesToDictionary())
 
-let tagNameParser = ParsePrint {
-    From<Conversions.UTF8ViewToSubstring, Substring, Prefix<Substring>>(.substring) {
-        Prefix { $0.isLetter }
-    }.map(.string)
+struct AttributesParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, OrderedDictionary<String, String>> {
+    Many(into: OrderedDictionary<String, String>()) { attrs, attr in
+      attrs.updateValue(attr.1, forKey: attr.0)
+    } decumulator: { attrs in
+      attrs.reversed().map({ ($0.key, $0.value) }).makeIterator()
+    } element: {
+      AttributeParser()
+    } separator: {
+      Whitespace(1..., .horizontal)
+    }
+  }
+}
+
+struct TagNameParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, String> {
+    From(.substring) {
+      Prefix { $0.isLetter }
+    }
+    .map(.string)
+  }
 }
 
 let tagHeadParser = ParsePrint {
-    tagNameParser
+    TagNameParser()
     Optionally {
         Whitespace(1..., .horizontal)
         attributesParser
@@ -51,10 +73,14 @@ let emptyTagParser = ParsePrint {
 .map(Conversions.UnpackXMLElement())
 .map(.memberwise(XML.Element.init))
 
-let commentParser = ParsePrint {
-    "<!--".utf8
-    PrefixUpTo("-->".utf8).map(.string).map(/XML.Node.comment)
-    "-->".utf8
+struct CommentParser: ParserPrinter {
+  var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
+    ParsePrint(.case(XML.Node.comment)) {
+      "<!--".utf8
+      PrefixUpTo("-->".utf8).map(.string)
+      "-->".utf8
+    }
+  }
 }
 
 let textParser = ParsePrint(input: Substring.UTF8View.self) {
@@ -111,7 +137,7 @@ let contentParser: (Int?) -> AnyParserPrinter<Substring.UTF8View, XML.Node> = { 
         OneOf {
             containerTagParser(indentation).map(/XML.Node.element)
             emptyTagParser.map(/XML.Node.element)
-            commentParser
+            CommentParser()
             textParser
         }
     }.eraseToAnyParserPrinter()

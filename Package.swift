@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.8
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -17,9 +17,9 @@ let package = Package(
             targets: ["XMLParser"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-parsing.git", from: "0.10.0"),
+        .package(url: "https://github.com/pointfreeco/swift-parsing.git", from: "0.12.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
-        .package(url: "https://github.com/pointfreeco/swift-custom-dump.git", from: "0.4.0"),
+        .package(url: "https://github.com/pointfreeco/swift-custom-dump.git", from: "1.0.0"),
     ],
     targets: [
         .target(
