@@ -92,33 +92,33 @@ final class XMLParserTests: XCTestCase {
 
     func testXMLContentText() throws {
         let body = "hoi"
-        let result = try contentParser(nil).parse(body)
+        let result = try ContentParser(indentation: nil).parse(body)
         XCTAssertNoDifference(result, .text("hoi"))
-        let printResult = try contentParser(nil).print(result)
+        let printResult = try ContentParser(indentation: nil).print(result)
         XCTAssertNoDifference(String(printResult), body)
     }
 
     func testXMLContentComment() throws {
         let body = "<!--hoi-->"
-        let result = try contentParser(nil).parse(body)
+        let result = try ContentParser(indentation: nil).parse(body)
         XCTAssertNoDifference(result, .comment("hoi"))
-        let printResult = try contentParser(nil).print(result)
+        let printResult = try ContentParser(indentation: nil).print(result)
         XCTAssertNoDifference(String(printResult), body)
     }
 
     func testXMLContentEmptyTag() throws {
         let tag = "<xmlTag header=\"none\"/>"
-        let result = try contentParser(nil).parse(tag)
+        let result = try ContentParser(indentation: nil).parse(tag)
         XCTAssertNoDifference(result, .element(.init(name: "xmlTag", attributes: ["header": "none"])))
-        let printResult = try contentParser(nil).print(result)
+        let printResult = try ContentParser(indentation: nil).print(result)
         XCTAssertNoDifference(String(printResult), tag)
     }
 
     func testXMLContentContainerTag() throws {
         let containerTag = "<xmlTag headerContent=\"none\">tagContent</xmlTag>"
-        let result = try contentParser(nil).parse(containerTag)
+        let result = try ContentParser(indentation: nil).parse(containerTag)
         XCTAssertNoDifference(result, .element(.init(name: "xmlTag", attributes: ["headerContent": "none"], content: [.text("tagContent")])))
-        let printResult = try contentParser(nil).print(result)
+        let printResult = try ContentParser(indentation: nil).print(result)
         XCTAssertNoDifference(String(printResult), containerTag)
     }
 

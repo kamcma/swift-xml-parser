@@ -137,7 +137,7 @@ let containerTagParser = { (indentation: Int?) in
         Whitespace(.vertical).printing(indentation != nil ? "\n".utf8 : "".utf8)
         Many {
             Lazy {
-                contentParser(indentation.map { $0 + 4 })
+                ContentParser(indentation: indentation.map { $0 + 4 })
                 Whitespace(.vertical).printing(
                     indentation != nil ? "\n".utf8 : "".utf8
                 )
@@ -156,19 +156,24 @@ let containerTagParser = { (indentation: Int?) in
     .map(.memberwise(XML.Element.init))
 }
 
-let contentParser: (Int?) -> AnyParserPrinter<Substring.UTF8View, XML.Node> = {
-    indentation in
-    ParsePrint {
+struct ContentParser: ParserPrinter {
+    let indentation: Int?
+
+    var body: some ParserPrinter<Substring.UTF8View, XML.Node> {
         Whitespace(.horizontal).printing(
             String(repeating: " ", count: indentation ?? 0).utf8
         )
         OneOf {
-            containerTagParser(indentation).map(/XML.Node.element)
-            emptyTagParser.map(/XML.Node.element)
+            ParsePrint(.case(XML.Node.element)) {
+                containerTagParser(indentation)
+            }
+            ParsePrint(.case(XML.Node.element)) {
+                emptyTagParser
+            }
             CommentParser()
             TextParser()
         }
-    }.eraseToAnyParserPrinter()
+    }
 }
 
 /// A reversible parser that takes in a string of XML and parses it into a structured ``XML`` type, or prints structured ``XML`` into an XML string.
