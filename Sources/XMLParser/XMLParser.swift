@@ -18,12 +18,6 @@ struct AttributeParser: ParserPrinter {
   }
 }
 
-let attributesParser = Many {
-    AttributeParser()
-} separator: {
-    Whitespace(1..., .horizontal)
-}.map(Conversions.TuplesToDictionary())
-
 struct AttributesParser: ParserPrinter {
   var body: some ParserPrinter<Substring.UTF8View, OrderedDictionary<String, String>> {
     Many(into: OrderedDictionary<String, String>()) { attrs, attr in
@@ -51,7 +45,7 @@ let tagHeadParser = ParsePrint {
     TagNameParser()
     Optionally {
         Whitespace(1..., .horizontal)
-        attributesParser
+        AttributesParser()
     }.map(Conversions.OptionalEmptyDictionary())
     Whitespace(.horizontal)
 }
@@ -94,7 +88,7 @@ let textParser = ParsePrint(input: Substring.UTF8View.self) {
 let xmlPrologParser = ParsePrint {
     "<?xml".utf8
     Whitespace(1..., .horizontal)
-    attributesParser
+    AttributesParser()
     Whitespace(.horizontal)
     "?>".utf8
 }
