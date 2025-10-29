@@ -124,9 +124,9 @@ final class XMLParserTests: XCTestCase {
 
     func testProlog() throws {
         let prolog = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-        let result = try xmlPrologParser.parse(prolog)
+        let result = try XMLPrologParser().parse(prolog)
         XCTAssertNoDifference(result, ["version": "1.0", "encoding": "utf-8"])
-        let printResult = try xmlPrologParser.print(result)
+        let printResult = try XMLPrologParser().print(result)
         XCTAssertNoDifference(String(printResult), prolog)
     }
 

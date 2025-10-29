@@ -99,21 +99,23 @@ struct TextParser: ParserPrinter {
     }
 }
 
-let xmlPrologParser = ParsePrint {
-    "<?xml".utf8
-    ParsePrint {
-        Whitespace(1..., .horizontal)
-        AttributesParser()
-    }
-    .replaceError(with: OrderedDictionary<String, String>())
-    .printing { attrs, input in
-        try AttributesParser().print(attrs, into: &input)
-        if !attrs.isEmpty {
-            try Whitespace(1, .horizontal).print(into: &input)
+struct XMLPrologParser: ParserPrinter {
+    var body: some ParserPrinter<Substring.UTF8View, OrderedDictionary<String, String>> {
+        "<?xml".utf8
+        ParsePrint {
+            Whitespace(1..., .horizontal)
+            AttributesParser()
         }
+        .replaceError(with: OrderedDictionary<String, String>())
+        .printing { attrs, input in
+            try AttributesParser().print(attrs, into: &input)
+            if !attrs.isEmpty {
+                try Whitespace(1, .horizontal).print(into: &input)
+            }
+        }
+        Whitespace(.horizontal)
+        "?>".utf8
     }
-    Whitespace(.horizontal)
-    "?>".utf8
 }
 
 let openingTagParser = ParsePrint {
@@ -184,7 +186,7 @@ public struct XMLParser: ParserPrinter {
     public init(indenting: Bool = true) {
         self.parser = ParsePrint {
             Optionally {
-                xmlPrologParser
+                XMLPrologParser()
                 Whitespace(.vertical).printing(indenting ? "\n".utf8 : "".utf8)
             }.map(Conversions.OptionalEmptyDictionary())
             containerTagParser(indenting ? 0 : nil)
